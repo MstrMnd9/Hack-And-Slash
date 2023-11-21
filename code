@@ -1,0 +1,866 @@
+//Hack & Slash - Trey Cashon
+
+#include <iostream>
+#include <time.h>
+#include <math.h>
+
+using namespace std;
+void classchoice(); 
+void turnstart();
+void attackaction();
+int spellaction();
+int itemaction();
+int weaponmight();
+int monsterspawn();
+void monstermoves();
+void shoptrip();
+string productplacement (int number);
+int productprice (string item);
+void itemandequipdisplay ();
+void fortuity ();
+void advice ();
+
+int atk=4, crit=15, maxhp=50, maxmp=25, hp, mp, mhp, def=0, magic=0, gold=0, mstatus=0, patk=0, pdef=0; // mhp is monster's hp, mstatus is monster status, patk and pdef is player status
+float difficulty=1; 
+int monsterfresh[10]={}; 
+string monster;
+string equipment[3]={"nothing", "nothing", "nothing"}; //0 is weapon, 1 is shield, 2 is cape (red, blue, yellow, or green)
+/*Weapons- Staff(0), Dagger(1), Axe(2)
+Shields- Spiked(1)(M takes damage), Ornate(-1)(Gain gold), Knight's(3), Magic(If spell, block 2. If attack, gain 1 mp)
+Capes- Red(atk up when Hp<1/2), Blue(gain mag when kill enemy), Yellow(find more gold), Green (items more potent)*/
+string itemlist [4]={"nothing", "nothing", "nothing", "nothing"};
+
+int main () {
+    int end=0, g, shop=0;
+    monsterfresh[1]=1; //ignore the random 1 here, it messes everything up if it's a 0
+    srand(time(0));
+    classchoice ();
+    monsterspawn();
+    while (end==0){ //The loop ends if there are no more monsters to spawn or hp<1
+          if (mhp>0)
+             turnstart ();
+          if (hp>maxhp)
+             hp=maxhp;
+          if (mp>maxmp)
+             mp=maxmp;
+          if (mhp<1){
+             mstatus=0;
+             cout<<"You killed it!"<<endl;
+             g=rand() % 3+2;
+             if (equipment[2]=="yellow cape")
+             g++;
+             cout<<"You got "<<g<<" gold!"<<endl;
+             gold+=g;
+             end=monsterspawn();
+             shop++;
+             if (equipment[2]=="blue cape")
+                mp+=7;
+             patk=0;
+             pdef=0;
+             }
+          else 
+               monstermoves();
+          //system ("pause");
+    if (hp<1){
+         end=1;
+         cout<<"You died! Game Over :("<<endl;
+         //system ("pause");
+}
+    if (shop==2 && end==0){
+       shop=0;
+       cout<<"let's go to the shop!"<<endl;
+       system ("pause");
+       shoptrip();
+       }
+}
+    return 0;
+}
+
+void classchoice (){
+     int input;
+     do{
+    cout<<"Would you like to be a fighter(1), rogue(2), barbarian(3), or mage(4)?"<<endl;
+    cout<<"Fighter: high attack, low crit chance\nRogue: high crit chance, low HP\nBarbarian: high HP, low MP\nMage: High MP, low attack"<<endl;
+    cin>>input;
+    //base stats are atk=4, crit=15, maxhp=50, maxmp=25
+
+    if (input==1){
+                  atk+=2;
+                  crit-=13;
+                  maxmp-=5;
+                  itemlist[0]="bomb";
+                  }
+    else if (input==2){
+                  crit+=20;
+                  maxhp-=10;
+                  maxmp+=5;
+                  gold+=3;
+                  }
+    else if (input==3){
+                  maxhp+=30;
+                  maxmp-=15;
+                  itemlist[0]="bandage";
+                  }
+    else if (input==4){
+                  maxmp+=20;
+                  atk-=2;
+                  itemlist[0]="potion";
+                  }
+    else if (input==666){
+         if (difficulty==1.25){
+            difficulty=1;
+            cout<<"Hard mode disabled"<<endl;
+            }
+         else{
+              difficulty=1.25;
+              cout<<"Hard mode enabled"<<endl;
+              }
+         //system ("pause");
+         //system ("cls");
+         }
+    else if (input==420){
+         if (difficulty==0.75){
+            difficulty=1;
+            cout<<"Easy mode disabled"<<endl;
+            }
+         else{
+              difficulty=0.75;
+              cout<<"Easy mode enabled"<<endl;
+              }
+         //system ("pause");
+         //system ("cls");
+         
+         }
+    else {
+         cout<<"Invalid entry. Please try again"<<endl;
+         //system ("pause");
+         //system ("cls");
+         }
+    
+                  }while(input!=1 && input!=2 && input!=3 && input!=4);
+    cout<<"atk="<<atk<<" crit="<<crit<<" max hp="<<maxhp<<" max mp="<<maxmp<<endl;
+    hp=maxhp;
+    mp=maxmp;
+    //system ("pause");
+}
+
+void turnstart (){
+     int input, back, wpnmt, damage;
+     wpnmt=weaponmight();
+     if (patk>0)
+        wpnmt+=patk;
+     damage=wpnmt+atk;
+     
+     if (monster=="zombie") //zombie's bite weakens you
+        damage-=mstatus;
+     if (monster=="golem" && mstatus!=0) //the golem's charm reduces damage
+        damage-=mstatus-1;
+        
+     if (damage<1)
+        damage=1;
+     //if (monster=="ghost" && mstatus==1) //ghosts noncorporealness makes attacks useless
+     //   damage=0;
+     if (equipment[2]=="red cape" && hp<maxhp/2)
+        damage*=2;
+        
+     if (hp>maxhp)
+        hp=maxhp;
+     if (mp>maxmp)
+        mp=maxmp;
+     do{
+        back=0;
+        //system ("cls");
+        cout<<"Look out, a "<<monster<<"!"<<endl;
+        cout<<"Hp="<<hp<<", Mp="<<mp<<", Attack="<<damage<<", Monster's HP="<<mhp<<" Gold="<<gold<<endl;
+        cout<<"\nWould you like to attack (1), cast a spell (2), use an item (3), \nor see your equpiment(4)?: "<<endl;
+        cin>>input;
+        if (input==1){
+           attackaction();
+           }
+        else if (input==2){
+             if (monster=="witch" && mstatus==1){
+                cout<<"You are hexed, you can't cast spells!"<<endl;
+                back=1;
+                //system ("pause");
+                }
+             else
+                back=spellaction();
+             }
+        else if (input==3){
+             if (monster=="witch" && mstatus==1){
+                cout<<"You are hexed, you can't use items!"<<endl;
+                back=1;
+                //system ("pause");
+                }
+             else
+                back=itemaction();
+             }
+        else if (input==4)
+             itemandequipdisplay ();
+        else{
+            cout<<"Error, invalid entry. Try again."<<endl;
+            //system ("pause");
+            }
+        }
+     while (input<1 || input>3 || back==1);
+     if (monster=="witch" && mstatus==1)
+        mstatus=0;
+}
+
+void attackaction (){
+     int critchance, wpnmt, critmod=3, red=1, damage;
+     if (equipment[0]=="dagger")
+        critmod++;
+     if (equipment[2]=="red cape" && hp<maxhp/2)
+        red=2;
+     
+     wpnmt=weaponmight();
+     if (patk>0)
+        wpnmt+=patk;
+     damage=wpnmt+atk;
+     critchance=rand() % 100;
+     
+     if (monster=="mummy" && mstatus==1)//mummy's curse makes crits impossible
+        critchance=crit+1; 
+     if (monster=="zombie") //zombie's bite lowers damage output
+        damage-=mstatus;
+     if (monster=="golem" && mstatus!=0) //the golem's charm reduces damage
+        damage-=mstatus-1;
+     
+
+     if (damage<1)
+        damage=1;
+        
+    // if (monster=="ghost" && mstatus==1) //Ghosts disappearance makes attacks useless
+      //  damage=0;
+     
+     if (critchance<crit){
+         mhp-=(damage)*critmod*red;
+         cout<<"Critial hit! "<<critmod<<" times damage!"<<endl;
+         //system ("pause");
+         }
+     else{
+         mhp-=(damage)*red;
+         if (monster=="ghost" && mstatus==1)
+            hp-=(damage)*red;
+            }
+     if (monster=="golem" && mstatus!=0)
+        mstatus++;
+}
+
+int spellaction (){
+    int input, notenough=0, mag=magic;
+     if (equipment[0]=="staff")
+        mag+=2;
+     cout<<"1: Kaylie's Pyre - 6 mp, "<<mag+10<<" damage - deals massive damage\n2: Anna's Siphon - 8 mp, "<<mag+5<<" damage - drains 10 hp from your opponent\n3: Trey's Fortuity - 5 mp - leave it up to fate"<<endl;
+     cout<<"Enter 4 to go back"<<endl;
+     cin>>input;
+     if (input==1){  //Kaylie's pyre
+            if (mp>=6){
+               mhp-=mag+10;
+               mp-=6;
+               }
+            else{
+                 cout<<"You don't have enough mp!"<<endl;
+                 //system ("pause");
+                 notenough=1;
+                 }
+            }
+               
+     else if (input==2){ //Anna's siphon
+          if (mp>=8){
+             mp-=8;
+             hp+=mag+10;
+             mhp-=mag+5;
+             }
+          else{
+                 cout<<"You don't have enough mp!"<<endl;
+                 //system ("pause");
+                 notenough=1;
+                 }
+          }
+     else if (input==3){  //Trey's fortuity
+          if (mp>=5){
+             mp-=5;
+             fortuity ();
+             //system ("pause");
+             }
+          else{
+                 cout<<"You don't have enough mp!"<<endl;
+                 //system ("pause");
+                 notenough=1;
+                 }
+          }
+          
+     if (monster=="golem")
+        mstatus=0;
+     if (input==4 || notenough==1)
+        return 1;
+     else
+         return 0;
+}
+
+int itemaction (){
+     int count, input=0, green=1;
+     string itemuse;
+     if (equipment[2]=="green cape")
+        green=2;
+     cout<<"Choose an item number to use it, or 5 to go back"<<endl;
+     for (count=0; count<=3; count++)
+         cout<<"Item "<<count+1<<": "<<itemlist[count]<<endl;
+     do{  //do while
+         cin>>input;
+         if (input>=1 && input<=4){ //if 1-4
+             if (itemlist[input-1]=="nothing"){ //if nothing
+               cout<<"Invalid entry! You can't use something you don't have! Try again."<<endl;
+               input=0;
+               } //end of if nothing
+             else{ //if it exists
+              itemuse=itemlist[input-1];
+              
+              if (itemuse=="bandage"){
+                    hp+=maxhp/2*green;
+                    }
+              if (itemuse=="potion"){
+                    mp+=maxmp/2*green;
+                    }
+              if (itemuse=="bomb")
+                 mhp-=15;
+              if (itemuse=="gun")
+                 mhp=0;
+              if (itemuse=="atk potion")
+                 patk+=2;
+              if (itemuse=="def potion")
+                 pdef+=2;
+              
+              switch (input){ //start of move up
+                   case 1: itemlist[0]=itemlist[1];
+                   case 2: itemlist[1]=itemlist[2];
+                   case 3: itemlist[2]=itemlist[3];
+                   case 4: itemlist[3]="nothing";
+                        break;
+                      } //end of move up
+              
+                      } //end of if it exists
+          } //end of if 1-4
+          else if (input<1 || input>5)
+               cout<<"Error! acceptable entries are 1-5"<<endl;
+     }while (input<1 || input>5);  //end of do while
+     
+     if (hp>maxhp)
+        hp=maxhp;
+     if (mp>maxmp)
+        mp=maxmp;
+        
+     if (input==5)
+        return 1;
+     else 
+          return 0;
+}
+
+int weaponmight(){
+    if (equipment[0]=="nothing")
+       return 0;
+    if (equipment[0]=="staff")
+       return 0;
+    if (equipment[0]=="dagger")
+       return 1;
+    if (equipment[0]=="axe")
+       return 2;
+       }
+
+void shoptrip(){ 
+     int count, input, price[7], slot=0, stop=0;
+     string wares[7];
+     //system ("cls");
+     while (input!=9){   
+         cout<<"Welcome to my shop! What would you like? (8 to see your items, 9 to leave)\nYou have "<<gold<<" gold\n"<<endl;
+         if (stop==0){
+             for (count=0; count<=6; count++){
+             wares[count]=productplacement(count);
+             price[count]=productprice(wares[count]); 
+             }          
+             stop++;
+             } 
+         cout<<"0: advice - Free!"<<endl;
+         for (count=0; count<=6; count++)
+             cout<<count+1<<": "<<wares[count]<<" - "<<price[count]<<" gold"<<endl;
+         cin>>input;
+         if (input!=9 && input!=0)
+             //system ("cls");
+         if (gold<price[input-1] && input>0 && input<8){
+            cout<<"Sorry, I don't speak broke :/\n"<<endl;
+            continue;
+            }
+         if (input==0){   //Advice
+            advice ();
+            //system ("pause");
+            //system ("cls");
+            }
+            
+         if (input>=1 && input<=3){
+             while (slot!=4){
+                   if (itemlist[slot]!="nothing")
+                      slot++;
+                   else
+                      break;
+                      }
+             if (slot==4)
+                cout<<"Your inventory is full, dummy! :P\n"<<endl;
+             else{
+                itemlist[slot]=wares[input-1];
+                gold-=price[input-1];
+                }
+             }
+         else if (input==4){
+            equipment[0]=wares[3];
+            gold-=price[input-1];
+            }
+         else if (input==5){
+            equipment[1]=wares[4];
+            gold-=price[input-1];
+            }
+         else if (input==6){
+            equipment[2]=wares[5];
+            gold-=price[input-1];
+            }
+         else if (input==7){
+              if (wares[6]=="spicy curry")
+                 atk++;
+              if (wares[6]=="crusty baguette")
+                 def++;
+              if (wares[6]=="hearty stew"){
+                 maxhp+=5;
+                 hp=maxhp;}
+              if (wares[6]=="bran muffin"){
+                 maxmp+=3;
+                 magic++;
+                 mp=maxmp;}
+              if (wares[6]=="sharp cheddar")
+                 crit+=3;
+              gold-=price[input-1];
+              }
+         else if (input==8)
+             itemandequipdisplay ();
+         else if (input<0 || input>9)
+             cout<<"Sorry, come again? I can't understand your accent XD\n"<<endl;
+         }
+     cout<<"\nCandy is dandy, but liquor is quicker ;)"<<endl;
+     //system ("pause");
+}
+
+string productplacement (int number){ //says what is being sold
+    int chance;
+    string item;
+    if (number==0) //always a bandage & potion available
+         return "bandage";
+    else if (number==1)
+         return "potion";
+    else if (number==2){ //other consumables
+         chance=rand() % 10;
+         if (chance==9)
+         return "gun";
+         if (chance<=8 && chance>=6)
+         return "bomb";
+         if (chance<=5 && chance>=3)
+         return "def potion";
+         if (chance<=2 && chance>=0)
+         return "atk potion";
+         }
+    else if (number==3){ //weapons
+    do{
+         chance=rand() % 3;
+         if (chance==0)
+         item="dagger";
+         if (chance==1)
+         item="staff";
+         if (chance==2)
+         item="axe";
+    }while (item==equipment[0]);  //I gotta jump through do-while loops and several hoops to make sure they don't buy something they already have
+    return item;
+         }
+    else if (number==4){ //shields
+    do{
+         chance=rand() % 4;
+         if (chance==0)
+         item="spiked shield";
+         if (chance==1)
+         item="ornate shield";
+         if (chance==2)
+         item="magic shield";
+         if (chance==3)
+         item="knight's shield";
+    }while (item==equipment[1]);
+    return item;
+         }
+    else if (number==5){ //capes
+    do{
+         chance=rand() % 4;
+         if (chance==0)
+         item="red cape";
+         if (chance==1)
+         item="blue cape";
+         if (chance==2)
+         item="yellow cape";
+         if (chance==3)
+         item="green cape";
+    }while (item==equipment[2]);
+    return item;
+         }
+    else if (number==6){ //foods
+         chance=rand() % 5;
+         if (chance==0)
+         return "spicy curry";  //atk+=1
+         if (chance==1)
+         return "crusty baguette"; //def+=1
+         if (chance==2)
+         return "hearty stew";  //maxhp+=5
+         if (chance==3)
+         return "bran muffin";  //maxmp+=3
+         if (chance==4)
+         return "sharp cheddar";
+         }
+}
+
+int productprice (string item){ //gives the price of the product
+    if (item=="bandage")
+         return 2;
+    else if (item=="potion")
+         return 3;
+    else if (item=="bomb" || item=="atk potion" || item=="def potion")
+         return 3;
+    else if (item=="gun" || item=="bran muffin")
+         return 6;
+    else if (item=="knight's shield" || item=="magic shield" || item=="ornate shield" || item=="spiked shield")
+         return 8;
+    else
+         return 5;
+}
+
+void itemandequipdisplay (){
+     int count;
+     char choice;
+     //system ("cls");
+     for (count=0; count<=3; count++)
+         cout<<"Item "<<count+1<<": "<<itemlist[count]<<endl;
+     cout<<"\nWeapon: "<<equipment[0]<<"\nShield: "<<equipment[1]<<"\nCape: "<<equipment[2]<<endl;
+     cout<<"\nStats: atk="<<atk<<" def="<<def<<" mag="<<magic<<" crit="<<crit<<" max hp="<<maxhp<<" max mp="<<maxmp<<endl;
+     cout<<"\nWould you like to view a glossary? (y/n): ";
+     cin>>choice;
+     if (choice=='y' || choice=='Y'){
+     cout<<"\nGlossary:\nAtk potion: Increases attack by 2 for the rest of combat\nAxe: Weapon with high damage\nBandage: Heals half of your max HP\nBlue cape: Restore some MP when killing a monster\nBomb: Deals 15 damage\nBran muffin: Increases max MP and magic"<<endl;
+     cout<<"Crusty baguette: Increases defense\nDagger: Increases damage with crits\nDef potion: Increases defense by 2 for the rest of combat\nGreen cape: Bandages and potions are twice as effective\nGun: Instant kill\nHearty stew: Increases max HP"<<endl;
+     cout<<"Knight's shield: Shield with high defensive power\nMagic shield: Magical, restores MP when attacked\nOrnate shield: recieve gold when attacked, but decreases defense"<<endl;
+     cout<<"Potion: Restores half of your max MP\nRed cape: Deal double damage when HP is below half\nSharp cheddar: Increases chance of critical hits\nSpicy curry: Increases strength"<<endl;
+     cout<<"Spiked shield: When attacked, the monster recieves damage\nStaff: Increases the effectiveness of spells\nYellow cape: Gain more gold from kills\n"<<endl;
+     }
+     //system ("pause");
+     //system ("cls");
+}
+     
+int monsterspawn(){ //to add a new monster, change the for loop & random number, up the monfresh array, and add monmoves
+     int x, y, check=0;
+     
+     for (x=0; x<=9; x++){ //This loop makes sure some monsters are still left to beat (increase x<=x)
+         if (monsterfresh[x]==0)
+            check++;
+            }
+     if (check==0){
+        cout<<"Congrats, you beat the game! :)"<<endl;
+        return 1;
+        }
+     else{
+          while (1){
+             y=rand() % 10;   //(increase y=rand()%x)
+             if (monsterfresh[y]==0 && y!=1)
+                break;
+                
+          
+          }
+     if (y==0){    //copy and paste this, while changing the y==x and the monfresh[x]
+          monster="vampire";
+          mhp=33*difficulty;
+          monsterfresh[0]++;
+          }
+     else if (y==2){ //NOTICE: I'm skipping 1 here because 1 is a butt
+          monster="werewolf";
+          mhp=46*difficulty;
+          monsterfresh[2]++;
+          }
+     else if (y==3){
+          monster="witch";
+          mhp=39*difficulty;
+          monsterfresh[3]++;
+          }
+     else if (y==4){
+          monster="zombie";
+          mhp=36*difficulty;
+          monsterfresh[4]++;
+          }
+     else if (y==5){
+          monster="mummy";
+          mhp=37*difficulty;
+          monsterfresh[5]++;
+          }
+     else if (y==6){
+          monster="ghost";
+          mhp=38*difficulty;
+          monsterfresh[6]++;
+          }
+     else if (y==7){
+          monster="golem";
+          mhp=40*difficulty;
+          monsterfresh[7]++;
+          }
+     else if (y==8){
+          monster="basilisk";
+          mhp=35*difficulty;
+          monsterfresh[8]++;
+          }
+     else if (y==9){
+          monster="demon";
+          mhp=42*difficulty;
+          monsterfresh[9]++;
+          }
+     }
+     return 0; 
+}
+
+void monstermoves (){  
+     int a, damage=0, nodamage=0, x; //a decides if it's an attack or a spell
+     a=rand() % 2; 
+     
+      if (monster=="vampire"){ //copy and paste this bad boy for more monsters
+          if (a==0 || mhp>=20){
+               cout<<"The vampire slashes at you!"<<endl;
+               damage=4;
+               }
+          else{
+               cout<<"The vampire bites you neck and drinks your blood!"<<endl;
+               damage=3;
+               mhp+=2;
+          }
+          }
+          
+     else if (monster=="werewolf"){
+          if (a==0){
+               cout<<"The werewolf claws your face!"<<endl;
+               damage=5+mstatus;
+               }
+          else{
+               cout<<"The werewolf howls! Its attack went up!"<<endl;
+               mstatus+=1;
+               nodamage=1;
+               }
+          }
+          
+     else if (monster=="witch"){
+          if (a==0){
+               cout<<"The witch whacks you with her broom!"<<endl;
+               damage=4;
+               }
+          else{
+               cout<<"The witch hexes you! You can't use magic or items next turn!"<<endl;
+               damage=2;
+               mstatus=1;
+               }
+               }
+     else if (monster=="zombie"){
+          if (a==0){
+               cout<<"The zombie kicks you!"<<endl;
+               damage=5;
+               }
+          else{
+               cout<<"The zombie bites you! Your muscles grow weak!"<<endl;
+               mstatus+=1;
+               damage=3;
+               }
+          }
+     else if (monster=="mummy"){
+          if (a==0 || mstatus==1){
+               cout<<"The mummy whips you with its bandages!"<<endl;
+               damage=5;
+               }
+          else{
+               cout<<"The mummy cursed you! You cannot land crits!"<<endl;
+               mstatus=1;
+               nodamage=1;
+               }
+          }
+     else if (monster=="ghost"){
+          if (a==0 || mstatus==1){
+               cout<<"The ghost spooks you!"<<endl;
+               damage=5;
+               mstatus=0;
+               }
+          else{
+               cout<<"The ghost possesses you! Next turn, your weapon will hurt you as well!"<<endl;
+               mstatus=1;
+               nodamage=1;
+               }
+          }
+     else if (monster=="golem"){
+          if (mstatus==0){ //the golem is a bit backward to account for his constant charm
+               cout<<"The golem charms itself! Your attacks will weaken until you cast a spell!"<<endl;
+               mstatus=1;
+               nodamage=1;
+               }
+          else{
+               cout<<"The golem bludgeons you!"<<endl;
+               damage=4;
+               }
+          }
+     else if (monster=="basilisk"){
+          if (a==0){
+               cout<<"The basilisk bashes its skull into you!"<<endl;
+               damage=2;
+               }
+          else{
+               cout<<"The basilisk bites you!"<<endl;
+               mstatus+=3;
+               nodamage=1;
+               }
+          if (mstatus>0){
+             //system ("pause");
+             hp-=mstatus;
+             cout<<"The venom burns! You take "<<mstatus--<<" damage from poison!"<<endl;
+             }
+          }
+     else if (monster=="demon"){
+          if (a==0 || mstatus==1 || mp<3){
+               cout<<"The demon swipes you with its claws!"<<endl;
+               damage=4;
+               mstatus=0;
+               }
+          else{
+               cout<<"The demon curses you! You lose mp";
+               mp-=3;
+               if (gold>0){
+                           cout<<" and gold";
+                           gold--;
+                           }
+               mstatus=1;
+               cout<<"!"<<endl;
+               }
+          }
+     
+     if (a==0){
+        damage-=def;
+        if (pdef>0)
+           damage-=pdef;
+        }
+     
+     if (a==0 && equipment[1]=="spiked shield"){
+          mhp-=2;
+          damage-=1;
+          }
+     if (a==0 && equipment[1]=="ornate shield"){
+          gold++;
+          damage+=1;
+          }
+     if (equipment[1]=="magic shield"){
+          if (a==0)
+          mp++;
+          if (a==1)
+          damage-=2;
+          }
+     if (a==0 && equipment[1]=="knight's shield")
+          damage-=3;
+     if (damage<1)
+        damage=1;   //if the move deals damage, it always deals at least one
+     if (nodamage==1) 
+        damage=0;   //unless it is purely status, in which case it deals no damage ever
+        
+     hp-=damage;
+               }
+void fortuity (){     //damage, self-damage, gold, item, hp restore
+     int chance, chance2, mag=magic, g=0; 
+     string item;
+     if (equipment[0]=="staff")
+        mag+=2;
+     if (itemlist[3]=="nothing")  //only spawn an item if they have an empty slot
+        chance=rand() % 5;
+     else
+         chance=rand() % 4;
+         
+     if (chance==0){ //self-damage
+          chance2=rand() % 5+2;
+          cout<<"Ouch! It backfired! You recieve "<<chance2<<" damage!"<<endl;
+          hp-=chance2;
+                    }
+     else if (chance==1){ //damage
+          chance2=rand() % 8+6+mag;
+          cout<<"You summon a fireball and deal "<<chance2<<" damage!"<<endl;
+          mhp-=chance2;
+          }
+     else if (chance==2){ //hp restore
+          chance2=rand() % 8+6+mag;
+          cout<<"You summon a cookie! Eating it, you gain "<<chance2<<" health!"<<endl;
+          hp+=chance2;
+          }
+     else if (chance==3){ //gold 
+          chance2=rand() % 6;
+          if (chance2==0||chance2==1||chance2==2)
+             g=1;
+          else if (chance2==3||chance2==4)
+             g=2;
+          else if (chance2==5)
+             g=3;
+          cout<<"You summon a wallet with "<<g<<" gold in it!"<<endl;
+          gold+=g;
+          }
+     else if (chance==4){ //item
+     while (g!=4){
+                   if (itemlist[g]!="nothing")
+                      g++;
+                   else
+                       break;
+                      }
+          chance2=rand() % 7;
+          if (chance2==0||chance2==1){
+             cout<<"You summoned a bandage!"<<endl;
+             itemlist[g]="bandage";
+             }
+          else if (chance2==2||chance2==3){
+             cout<<"You summoned a potion!"<<endl;
+             itemlist[g]="potion";
+             }
+          else if (chance2==4||chance2==5){
+             cout<<"You summoned a bomb!"<<endl;
+             itemlist[g]="bomb";
+             }
+          else if (chance2==6){
+             cout<<"You summoned a gun!"<<endl;
+             itemlist[g]="gun";
+             }
+          
+          }
+     
+     }
+void advice (){
+     int chance = rand() % 11;
+     if (chance==0)
+          cout<<"Every monster has a normal attack and a magic ability, luv."<<endl;
+     else if (chance==1)
+          cout<<"Atk and Def potions stack, luv, but they wear off when you kill the monster."<<endl;
+     else if (chance==2)
+          cout<<"Shields only defend against normal attacks, not nasty spells."<<endl;
+     else if (chance==3)
+          cout<<"My wares are fresh and well-priced, every time you visit."<<endl;
+     else if (chance==4)
+          cout<<"If you pick up a new weapon, you leave your old one behind. No refunds! XD"<<endl;
+     else if (chance==5)
+          cout<<"Did you kill that doggone witch? She keeps turning my potions back into frogs."<<endl;
+     else if (chance==6)
+          cout<<"I'll never offer equipment you already have. I'm not a dunce. :P"<<endl;
+     else if (chance==7)
+          cout<<"You should try the food here, luv. You'll feel great the rest of your trip."<<endl;
+     else if (chance==8)
+          cout<<"Watch out for the demon, he'll rend you penniless."<<endl;
+     else if (chance==9)
+          cout<<"You can have 1 weapon, 1 shield, 1 cape, and 4 items. Purchase carefully, luv!"<<endl;
+     else if (chance==10)
+          cout<<"Every class begins with a item - except the rogue, who comes with cash instead."<<endl;
+          }
+
+
